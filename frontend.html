@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowDrop — Visual Dropdown Flow Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f14;
+  --bg2: #13161e;
+  --bg3: #1a1e2a;
+  --border: #252b38;
+  --border2: #2f3647;
+  --text: #e8ecf4;
+  --text2: #8892a4;
+  --text3: #4f5a6e;
+  --accent: #5b6ef5;
+  --accent2: #7c8ffa;
+  --accent-glow: rgba(91,110,245,0.25);
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --node-bg: #1a1e2a;
+  --node-border: #2f3647;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+
+/* ─── AUTH SCREEN ─── */
+#auth-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.auth-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 48px; width: 420px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(91,110,245,0.1);
+}
+.auth-logo { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.auth-logo span { color: var(--accent2); }
+.auth-subtitle { color: var(--text2); font-size: 14px; margin-bottom: 36px; }
+.auth-tabs { display: flex; gap: 4px; background: var(--bg3); border-radius: 10px; padding: 4px; margin-bottom: 28px; }
+.auth-tab { flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text2); transition: all 0.2s; }
+.auth-tab.active { background: var(--bg); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.auth-form { display: flex; flex-direction: column; gap: 16px; }
+.auth-input { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; color: var(--text); font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; }
+.auth-input:focus { border-color: var(--accent); }
+.auth-input::placeholder { color: var(--text3); }
+.auth-btn { background: var(--accent); color: white; border: none; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Syne', sans-serif; }
+.auth-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+.auth-error { color: var(--red); font-size: 13px; padding: 10px 14px; background: rgba(239,68,68,0.1); border-radius: 8px; border: 1px solid rgba(239,68,68,0.2); }
+
+/* ─── MAIN APP ─── */
+#app { display: none; width: 100%; height: 100%; flex-direction: column; }
+#app.visible { display: flex; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  height: 56px; background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 16px; flex-shrink: 0; z-index: 100;
+}
+.topbar-logo { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
+.topbar-logo span { color: var(--accent2); }
+.topbar-divider { width: 1px; height: 24px; background: var(--border2); }
+.chart-title-input {
+  background: transparent; border: none; color: var(--text); font-size: 15px; font-weight: 500;
+  font-family: 'Inter', sans-serif; outline: none; width: 220px; padding: 4px 8px; border-radius: 6px;
+}
+.chart-title-input:hover { background: var(--bg3); }
+.chart-title-input:focus { background: var(--bg3); }
+.topbar-spacer { flex: 1; }
+.collaborators { display: flex; gap: -8px; align-items: center; }
+.collab-avatar {
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--bg2);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+  color: white; margin-left: -8px; cursor: default; position: relative;
+}
+.collab-avatar:first-child { margin-left: 0; }
+.save-status { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+.save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.save-dot.saving { background: var(--yellow); animation: pulse 1s infinite; }
+.topbar-btn {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text2);
+  padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px; transition: all 0.2s; white-space: nowrap;
+}
+.topbar-btn:hover { background: var(--border2); color: var(--text); }
+.topbar-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.topbar-btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; cursor: pointer; }
+
+/* ─── BODY ─── */
+.app-body { display: flex; flex: 1; overflow: hidden; }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: 280px; background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto;
+}
+.sidebar-section { padding: 16px; border-bottom: 1px solid var(--border); }
+.sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 12px; }
+.sidebar-btn {
+  width: 100%; padding: 10px 14px; background: var(--bg3); border: 1px dashed var(--border2);
+  border-radius: 10px; color: var(--text2); cursor: pointer; font-size: 13px;
+  text-align: left; transition: all 0.2s; display: flex; align-items: center; gap: 8px; font-family: 'Inter', sans-serif;
+}
+.sidebar-btn:hover { background: var(--border); color: var(--text); border-color: var(--accent); }
+.sidebar-btn.add { background: rgba(91,110,245,0.1); border-color: var(--accent); color: var(--accent2); }
+.sidebar-btn.add:hover { background: rgba(91,110,245,0.2); }
+
+/* File list */
+.file-list { display: flex; flex-direction: column; gap: 4px; }
+.file-item {
+  padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text2);
+  display: flex; align-items: center; gap: 8px; transition: all 0.15s;
+}
+.file-item:hover { background: var(--bg3); color: var(--text); }
+.file-item.active { background: rgba(91,110,245,0.15); color: var(--accent2); }
+.file-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(91,110,245,0.2); color: var(--accent2); }
+
+/* ─── NODE PANEL ─── */
+.node-panel {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 300px;
+  background: var(--bg2); border-left: 1px solid var(--border);
+  padding: 20px; overflow-y: auto; z-index: 50; transform: translateX(100%); transition: transform 0.25s ease;
+}
+.node-panel.open { transform: translateX(0); }
+.panel-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+.panel-close { cursor: pointer; color: var(--text3); font-size: 18px; }
+.panel-section { margin-bottom: 20px; }
+.panel-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); margin-bottom: 8px; font-weight: 600; }
+.panel-input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 10px 12px; color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif;
+  outline: none; transition: border-color 0.2s;
+}
+.panel-input:focus { border-color: var(--accent); }
+.options-list { display: flex; flex-direction: column; gap: 6px; }
+.option-row { display: flex; align-items: center; gap: 8px; }
+.option-input {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 8px 10px; color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif; outline: none;
+}
+.option-input:focus { border-color: var(--accent); }
+.option-del { width: 28px; height: 28px; border-radius: 6px; background: rgba(239,68,68,0.1); border: none; color: var(--red); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+.add-option-btn { padding: 8px; background: var(--bg3); border: 1px dashed var(--border2); border-radius: 8px; color: var(--text2); cursor: pointer; font-size: 13px; width: 100%; font-family: 'Inter', sans-serif; }
+.add-option-btn:hover { border-color: var(--accent); color: var(--accent2); }
+.panel-btn { width: 100%; padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'Syne', sans-serif; transition: all 0.2s; }
+.panel-btn.primary { background: var(--accent); color: white; }
+.panel-btn.primary:hover { background: var(--accent2); }
+.panel-btn.danger { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); margin-top: 8px; }
+.panel-btn.danger:hover { background: rgba(239,68,68,0.2); }
+
+/* ─── CANVAS WRAPPER ─── */
+.canvas-wrapper { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+.canvas-wrapper canvas { position: absolute; top: 0; left: 0; }
+#canvas-bg { z-index: 1; }
+#canvas-main { z-index: 2; cursor: default; }
+
+/* ─── TOOLBAR ─── */
+.canvas-toolbar {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px;
+  padding: 8px 12px; display: flex; align-items: center; gap: 6px; z-index: 100;
+  box-shadow: var(--shadow);
+}
+.tool-btn {
+  width: 36px; height: 36px; border-radius: 8px; border: none; background: transparent;
+  color: var(--text2); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.tool-btn:hover { background: var(--bg3); color: var(--text); }
+.tool-btn.active { background: rgba(91,110,245,0.2); color: var(--accent2); }
+.tool-sep { width: 1px; height: 24px; background: var(--border2); margin: 0 4px; }
+.zoom-display { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); padding: 0 8px; min-width: 48px; text-align: center; }
+
+/* ─── SHARE MODAL ─── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500;
+  display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 18px;
+  padding: 32px; width: 480px; max-width: 95vw; box-shadow: var(--shadow);
+}
+.modal-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.modal-sub { color: var(--text2); font-size: 14px; margin-bottom: 24px; }
+.share-link-box { background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.share-link-text { flex: 1; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copy-btn { background: var(--accent); border: none; color: white; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.copy-btn:hover { background: var(--accent2); }
+.share-user-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.share-user-input { flex: 1; background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 14px; font-family: 'Inter', sans-serif; outline: none; }
+.share-user-input:focus { border-color: var(--accent); }
+.share-perm-select { background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; }
+.share-send-btn { background: var(--accent); border: none; color: white; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.share-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.share-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg3); border-radius: 10px; font-size: 13px; }
+.share-item-name { flex: 1; }
+.share-item-perm { color: var(--text3); font-size: 12px; }
+.modal-close { float: right; background: none; border: none; color: var(--text2); cursor: pointer; font-size: 22px; margin-top: -4px; }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 10px 20px; font-size: 13px; color: var(--text); opacity: 0; transition: all 0.3s;
+  pointer-events: none; z-index: 999; box-shadow: var(--shadow);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─── REMOTE CURSORS ─── */
+.remote-cursor {
+  position: absolute; pointer-events: none; z-index: 200; transition: left 0.05s, top 0.05s;
+}
+.cursor-label {
+  background: var(--cursor-color); color: white; font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap; margin-top: 18px; margin-left: 4px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ─── CONTEXT MENU ─── */
+.ctx-menu {
+  position: fixed; background: var(--bg2); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 6px; z-index: 300; box-shadow: var(--shadow); min-width: 160px; display: none;
+}
+.ctx-item { padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text2); transition: all 0.15s; }
+.ctx-item:hover { background: var(--bg3); color: var(--text); }
+.ctx-item.danger { color: var(--red); }
+.ctx-item.danger:hover { background: rgba(239,68,68,0.1); }
+.ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ─── DASHBOARD ─── */
+#dashboard { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 200; flex-direction: column; }
+#dashboard.visible { display: flex; }
+.dash-header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; }
+.dash-logo { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+.dash-logo span { color: var(--accent2); }
+.dash-spacer { flex: 1; }
+.dash-user { display: flex; align-items: center; gap: 10px; }
+.dash-username { font-size: 14px; font-weight: 500; }
+.dash-body { flex: 1; overflow-y: auto; padding: 32px; }
+.dash-section-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 40px; }
+.chart-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+  cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.chart-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(91,110,245,0.15); }
+.chart-card-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.chart-card-meta { font-size: 12px; color: var(--text3); }
+.chart-card-badge { position: absolute; top: 14px; right: 14px; font-size: 10px; padding: 3px 8px; border-radius: 20px; }
+.badge-owner { background: rgba(91,110,245,0.15); color: var(--accent2); }
+.badge-shared { background: rgba(34,197,94,0.15); color: var(--green); }
+.new-chart-card { border-style: dashed; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 120px; }
+.new-chart-card:hover { border-color: var(--accent); }
+.new-chart-icon { font-size: 28px; color: var(--text3); }
+.new-chart-text { font-size: 14px; color: var(--text3); }
+
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">Flow<span>Drop</span></div>
+    <div class="auth-subtitle">Visual dropdown flowchart builder with real-time collaboration</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('register')">Create Account</div>
+    </div>
+    <div class="auth-form" id="auth-form">
+      <input class="auth-input" type="text" id="auth-username" placeholder="Username" />
+      <input class="auth-input" type="password" id="auth-password" placeholder="Password" />
+      <div id="auth-error" class="auth-error" style="display:none"></div>
+      <button class="auth-btn" onclick="submitAuth()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="dash-header">
+    <div class="dash-logo">Flow<span>Drop</span></div>
+    <div class="dash-spacer"></div>
+    <div class="dash-user">
+      <div class="user-avatar" id="dash-avatar"></div>
+      <span class="dash-username" id="dash-uname"></span>
+      <button class="topbar-btn" onclick="logoutUser()">Sign out</button>
+    </div>
+  </div>
+  <div class="dash-body">
+    <div class="dash-section-title">Your Charts</div>
+    <div class="dash-grid" id="charts-grid">
+      <div class="chart-card new-chart-card" onclick="createNewChart()">
+        <div class="new-chart-icon">＋</div>
+        <div class="new-chart-text">New Chart</div>
+      </div>
+    </div>
+    <div class="dash-section-title">Shared with You</div>
+    <div class="dash-grid" id="shared-grid"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">Flow<span>Drop</span></div>
+    <div class="topbar-divider"></div>
+    <button class="topbar-btn" onclick="showDashboard()" style="padding:7px 10px">← Back</button>
+    <input class="chart-title-input" id="chart-title" value="Untitled Chart" onchange="onTitleChange()" />
+    <div class="topbar-spacer"></div>
+    <div class="save-status"><div class="save-dot" id="save-dot"></div><span id="save-text">Saved</span></div>
+    <div class="collaborators" id="collaborators"></div>
+    <button class="topbar-btn primary" onclick="openShareModal()">⟳ Share</button>
+    <div class="user-avatar" id="app-avatar" title="You"></div>
+  </div>
+  <div class="app-body">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Add Nodes</div>
+        <button class="sidebar-btn add" onclick="addDropdownNode()">＋ Dropdown Node</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Node Types</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.7">
+          <div>📦 <b style="color:var(--text2)">Dropdown</b> — Shows options for user selection</div>
+          <div style="margin-top:8px">→ Connect outputs to trigger child nodes</div>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Instructions</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.8">
+          <div>• Click node to edit</div>
+          <div>• Drag node to move</div>
+          <div>• Drag output dot → input dot to connect</div>
+          <div>• Right-click for options</div>
+          <div>• Scroll to zoom, drag canvas to pan</div>
+        </div>
+      </div>
+    </div>
+    <!-- CANVAS -->
+    <div class="canvas-wrapper" id="canvas-wrapper">
+      <canvas id="canvas-bg"></canvas>
+      <canvas id="canvas-main"></canvas>
+      <!-- Remote cursors go here -->
+      <div id="cursors-layer" style="position:absolute;top:0;left:0;pointer-events:none;z-index:200"></div>
+      <!-- Canvas toolbar -->
+      <div class="canvas-toolbar">
+        <button class="tool-btn" onclick="zoomIn()" title="Zoom in">+</button>
+        <span class="zoom-display" id="zoom-label">100%</span>
+        <button class="tool-btn" onclick="zoomOut()" title="Zoom out">−</button>
+        <button class="tool-btn" onclick="resetZoom()" title="Reset">⟳</button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="fitAll()" title="Fit all nodes">⊞</button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" id="preview-btn" onclick="togglePreview()" title="Preview mode">▷</button>
+      </div>
+      <!-- Node panel -->
+      <div class="node-panel" id="node-panel">
+        <div class="panel-title">Edit Node <span class="panel-close" onclick="closePanel()">×</span></div>
+        <div class="panel-section">
+          <div class="panel-label">Label / Question</div>
+          <input class="panel-input" id="panel-label" placeholder="e.g. Select Battery Type" oninput="onPanelChange()" />
+        </div>
+        <div class="panel-section">
+          <div class="panel-label">Options</div>
+          <div class="options-list" id="panel-options"></div>
+          <button class="add-option-btn" onclick="addOptionField()">+ Add Option</button>
+        </div>
+        <div class="panel-section">
+          <div class="panel-label">Note (visible in preview)</div>
+          <input class="panel-input" id="panel-note" placeholder="e.g. Shape depends on battery type" oninput="onPanelChange()" />
+        </div>
+        <button class="panel-btn primary" onclick="applyPanel()">Apply Changes</button>
+        <button class="panel-btn danger" onclick="deleteSelectedNode()">Delete Node</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeShareModal()">×</button>
+    <div class="modal-title">Share Chart</div>
+    <div class="modal-sub">Invite collaborators or share a link</div>
+    <div id="share-link-section">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Share link (anyone with link can edit)</div>
+      <div class="share-link-box">
+        <div class="share-link-text" id="share-link-text">Generating...</div>
+        <button class="copy-btn" onclick="copyShareLink()">Copy</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Share with specific user</div>
+    <div class="share-user-row">
+      <input class="share-user-input" id="share-username-input" placeholder="Enter username..." />
+      <select class="share-perm-select" id="share-perm">
+        <option value="edit">Can Edit</option>
+        <option value="view">Can View</option>
+      </select>
+      <button class="share-send-btn" onclick="shareWithUser()">Share</button>
+    </div>
+    <div class="share-list" id="share-list"></div>
+  </div>
+</div>
+
+<!-- PREVIEW MODAL -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal" style="width:600px;max-width:95vw">
+    <button class="modal-close" onclick="closePreview()">×</button>
+    <div class="modal-title">Chart Preview</div>
+    <div class="modal-sub">Interactive dropdown flow</div>
+    <div id="preview-content" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-item" onclick="ctxEdit()">✏️ Edit Node</div>
+  <div class="ctx-item" onclick="ctxDuplicate()">⧉ Duplicate</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" onclick="ctxDelete()">🗑 Delete</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:8000/api';
+let authMode = 'login';
+let token = localStorage.getItem('fd_token') || '';
+let currentUser = JSON.parse(localStorage.getItem('fd_user') || 'null');
+let currentChartId = null;
+let ws = null;
+let saveTimer = null;
+
+// ─── AUTH ───────────────────────────────────────────────
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&mode==='login')||(i===1&&mode==='register')));
+  document.querySelector('.auth-btn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+}
+
+async function submitAuth() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  if (!username || !password) { errEl.textContent = 'Fill in all fields'; errEl.style.display = 'block'; return; }
+  try {
+    const res = await fetch(`${API}/auth/${authMode}/`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+    token = data.token; currentUser = data.user;
+    localStorage.setItem('fd_token', token);
+    localStorage.setItem('fd_user', JSON.stringify(currentUser));
+    showDashboard();
+  } catch(e) { errEl.textContent = 'Cannot connect to server. Make sure Django is running.'; errEl.style.display = 'block'; }
+}
+
+async function logoutUser() {
+  await apiFetch('/auth/logout/', 'POST');
+  localStorage.removeItem('fd_token'); localStorage.removeItem('fd_user');
+  token = ''; currentUser = null;
+  document.getElementById('dashboard').classList.remove('visible');
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+function apiFetch(path, method='GET', body=null) {
+  return fetch(API + path, {
+    method, headers: {'Content-Type':'application/json','Authorization': `Bearer ${token}`},
+    body: body ? JSON.stringify(body) : null
+  }).then(r => r.json());
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────
+async function showDashboard() {
+  if (!token || !currentUser) { document.getElementById('auth-screen').style.display = 'flex'; return; }
+  disconnectWS();
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.remove('visible');
+  const dash = document.getElementById('dashboard');
+  dash.classList.add('visible');
+  const av = document.getElementById('dash-avatar');
+  av.textContent = currentUser.username[0].toUpperCase();
+  av.style.background = currentUser.avatar_color;
+  document.getElementById('dash-uname').textContent = currentUser.username;
+  loadCharts();
+}
+
+async function loadCharts() {
+  const data = await apiFetch('/charts/');
+  const grid = document.getElementById('charts-grid');
+  const sgrid = document.getElementById('shared-grid');
+  grid.innerHTML = `<div class="chart-card new-chart-card" onclick="createNewChart()"><div class="new-chart-icon">＋</div><div class="new-chart-text">New Chart</div></div>`;
+  data.owned.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'chart-card';
+    d.innerHTML = `<span class="chart-card-badge badge-owner">Owner</span><div class="chart-card-title">${c.title}</div><div class="chart-card-meta">Updated ${timeAgo(c.updated_at)}</div>`;
+    d.onclick = () => openChart(c.id);
+    grid.appendChild(d);
+  });
+  sgrid.innerHTML = '';
+  data.shared.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'chart-card';
+    d.innerHTML = `<span class="chart-card-badge badge-shared">Shared</span><div class="chart-card-title">${c.title}</div><div class="chart-card-meta">Updated ${timeAgo(c.updated_at)}</div>`;
+    d.onclick = () => openChart(c.id);
+    sgrid.appendChild(d);
+  });
+}
+
+async function createNewChart() {
+  const data = await apiFetch('/charts/', 'POST', {title: 'Untitled Chart', canvas_data: {nodes: [], connections: []}});
+  openChart(data.id);
+}
+
+async function openChart(chartId) {
+  currentChartId = chartId;
+  const data = await apiFetch(`/charts/${chartId}/`);
+  document.getElementById('dashboard').classList.remove('visible');
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('chart-title').value = data.title;
+  const av = document.getElementById('app-avatar');
+  av.textContent = currentUser.username[0].toUpperCase();
+  av.style.background = currentUser.avatar_color;
+  initCanvas();
+  loadCanvasData(data.canvas_data);
+  connectWS(chartId);
+}
+
+// ─── WEBSOCKET ───────────────────────────────────────────
+function connectWS(chartId) {
+  disconnectWS();
+  const wsUrl = `ws://localhost:8000/ws/chart/${chartId}/`;
+  ws = new WebSocket(wsUrl);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({type:'join', user_id: currentUser.id, username: currentUser.username, avatar_color: currentUser.avatar_color}));
+  };
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'cursor_move') updateRemoteCursor(msg);
+    else if (msg.type === 'user_joined') addCollaborator(msg);
+    else if (msg.type === 'user_left') removeCollaborator(msg);
+    else if (msg.type === 'canvas_change') {
+      if (msg.user_id !== currentUser.id) { loadCanvasData(msg.canvas_data); }
+    }
+    else if (msg.type === 'node_select') highlightRemoteSelection(msg);
+  };
+  ws.onclose = () => {};
+}
+
+function disconnectWS() {
+  if (ws) { ws.close(); ws = null; }
+  document.getElementById('collaborators').innerHTML = '';
+  document.getElementById('cursors-layer').innerHTML = '';
+}
+
+function sendWS(data) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(data)); }
+
+// ─── COLLABORATORS ────────────────────────────────────────
+const remoteCollaborators = {};
+
+function addCollaborator(msg) {
+  remoteCollaborators[msg.user_id] = msg;
+  refreshCollabAvatars();
+}
+function removeCollaborator(msg) {
+  delete remoteCollaborators[msg.user_id];
+  const el = document.getElementById(`cursor-${msg.user_id}`);
+  if (el) el.remove();
+  refreshCollabAvatars();
+}
+function refreshCollabAvatars() {
+  const el = document.getElementById('collaborators');
+  el.innerHTML = '';
+  Object.values(remoteCollaborators).forEach(u => {
+    const av = document.createElement('div');
+    av.className = 'collab-avatar';
+    av.style.background = u.avatar_color;
+    av.textContent = u.username[0].toUpperCase();
+    av.title = u.username;
+    el.appendChild(av);
+  });
+}
+
+function updateRemoteCursor(msg) {
+  let el = document.getElementById(`cursor-${msg.user_id}`);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'remote-cursor';
+    el.id = `cursor-${msg.user_id}`;
+    el.style.setProperty('--cursor-color', msg.avatar_color);
+    el.innerHTML = `<svg width="16" height="20" viewBox="0 0 16 20"><path d="M0 0 L0 16 L4 12 L7 19 L9 18 L6 11 L11 11 Z" fill="${msg.avatar_color}"/></svg><div class="cursor-label">${msg.username}</div>`;
+    document.getElementById('cursors-layer').appendChild(el);
+  }
+  // Convert world coords to screen
+  const sx = msg.x * zoom + panX;
+  const sy = msg.y * zoom + panY;
+  el.style.left = sx + 'px';
+  el.style.top = sy + 'px';
+}
+
+function highlightRemoteSelection(msg) {
+  // Briefly flash node
+  if (msg.node_id) {
+    const node = nodes.find(n => n.id === msg.node_id);
+    if (node) { node._remoteSelect = msg.avatar_color; setTimeout(() => { node._remoteSelect = null; redraw(); }, 2000); redraw(); }
+  }
+}
+
+// ─── CANVAS ENGINE ────────────────────────────────────────
+let canvas, ctx, bgCanvas, bgCtx;
+let nodes = [], connections = [];
+let zoom = 1, panX = 0, panY = 0;
+let dragging = null, dragOffX = 0, dragOffY = 0;
+let connecting = null; // {node, portType}
+let connectEnd = null;
+let selectedNode = null;
+let isPanning = false, panStart = {x:0,y:0}, panStartPan = {x:0,y:0};
+let spaceDown = false;
+let isPreview = false;
+
+const NODE_W = 220, NODE_H = 56, PORT_R = 7, OPTION_H = 32;
+
+function initCanvas() {
+  const wrapper = document.getElementById('canvas-wrapper');
+  canvas = document.getElementById('canvas-main');
+  bgCanvas = document.getElementById('canvas-bg');
+  ctx = canvas.getContext('2d');
+  bgCtx = bgCanvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  canvas.addEventListener('mousedown', onMouseDown);
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('wheel', onWheel, {passive:false});
+  canvas.addEventListener('contextmenu', onRightClick);
+  canvas.addEventListener('dblclick', onDblClick);
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+}
+
+function resizeCanvas() {
+  if (!canvas) return;
+  const wrapper = document.getElementById('canvas-wrapper');
+  const w = wrapper.clientWidth, h = wrapper.clientHeight;
+  canvas.width = bgCanvas.width = w;
+  canvas.height = bgCanvas.height = h;
+  drawGrid();
+  redraw();
+}
+
+function drawGrid() {
+  if (!bgCtx) return;
+  bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+  bgCtx.fillStyle = '#0d0f14';
+  bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height);
+  const gs = 28 * zoom;
+  const ox = ((panX % gs) + gs) % gs;
+  const oy = ((panY % gs) + gs) % gs;
+  bgCtx.strokeStyle = 'rgba(255,255,255,0.03)';
+  bgCtx.lineWidth = 1;
+  for (let x = ox - gs; x < bgCanvas.width + gs; x += gs) {
+    bgCtx.beginPath(); bgCtx.moveTo(x,0); bgCtx.lineTo(x,bgCanvas.height); bgCtx.stroke();
+  }
+  for (let y = oy - gs; y < bgCanvas.height + gs; y += gs) {
+    bgCtx.beginPath(); bgCtx.moveTo(0,y); bgCtx.lineTo(bgCanvas.width,y); bgCtx.stroke();
+  }
+}
+
+function worldToScreen(x,y) { return {x: x*zoom+panX, y: y*zoom+panY}; }
+function screenToWorld(x,y) { return {x: (x-panX)/zoom, y: (y-panY)/zoom}; }
+
+function getNodeHeight(node) {
+  return NODE_H + (node.options && node.options.length > 0 ? node.options.length * OPTION_H + 8 : 0);
+}
+
+function redraw() {
+  if (!ctx) return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // Draw connections
+  connections.forEach(conn => drawConnection(conn));
+  if (connecting && connectEnd) drawTempConnection();
+  // Draw nodes
+  nodes.forEach(n => drawNode(n));
+}
+
+function drawNode(node) {
+  const {x: sx, y: sy} = worldToScreen(node.x, node.y);
+  const sw = NODE_W * zoom, sh = getNodeHeight(node) * zoom;
+  const r = 12 * zoom;
+  const isSelected = selectedNode === node;
+  
+  ctx.save();
+  // Shadow
+  if (isSelected) {
+    ctx.shadowColor = '#5b6ef5'; ctx.shadowBlur = 20 * zoom;
+  }
+  // Background
+  roundRect(ctx, sx, sy, sw, sh, r);
+  ctx.fillStyle = node._remoteSelect ? 'rgba(91,110,245,0.25)' : (isSelected ? '#1e2438' : '#1a1e2a');
+  ctx.fill();
+  // Border
+  ctx.strokeStyle = isSelected ? '#5b6ef5' : (node._remoteSelect ? node._remoteSelect : '#2f3647');
+  ctx.lineWidth = (isSelected ? 2 : 1) * zoom;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  
+  // Header
+  const hh = NODE_H * zoom;
+  roundRect(ctx, sx, sy, sw, hh, r, true);
+  ctx.fillStyle = '#212638';
+  ctx.fill();
+  
+  // Icon
+  ctx.font = `${14*zoom}px Inter`;
+  ctx.fillStyle = '#5b6ef5';
+  ctx.fillText('▾', sx + 14*zoom, sy + 34*zoom);
+  
+  // Label
+  ctx.font = `${600} ${13*zoom}px Inter`;
+  ctx.fillStyle = '#e8ecf4';
+  ctx.fillText(truncate(node.label || 'Dropdown', (NODE_W-52)/zoom, ctx), sx + 32*zoom, sy + 34*zoom);
+  
+  // Note icon if note exists
+  if (node.note) {
+    ctx.font = `${11*zoom}px Inter`;
+    ctx.fillStyle = '#4f5a6e';
+    ctx.fillText('ℹ', sx + sw - 20*zoom, sy + 34*zoom);
+  }
+  
+  // Options
+  if (node.options && node.options.length > 0) {
+    node.options.forEach((opt, i) => {
+      const oy = sy + NODE_H*zoom + i*OPTION_H*zoom + 4*zoom;
+      const oh = (OPTION_H-4)*zoom;
+      // Highlight connected options
+      const isConnected = connections.some(c => c.fromNode === node.id && c.fromOption === i);
+      roundRect(ctx, sx+8*zoom, oy, sw-16*zoom, oh, 6*zoom);
+      ctx.fillStyle = isConnected ? 'rgba(91,110,245,0.12)' : 'rgba(255,255,255,0.03)';
+      ctx.fill();
+      ctx.strokeStyle = isConnected ? 'rgba(91,110,245,0.4)' : 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = zoom;
+      ctx.stroke();
+      ctx.font = `${12*zoom}px Inter`;
+      ctx.fillStyle = isConnected ? '#7c8ffa' : '#8892a4';
+      ctx.fillText(truncate(opt || 'Option', (NODE_W-50)/zoom, ctx), sx+18*zoom, oy+oh/2+4*zoom);
+      // Output dot
+      const dotX = sx + sw - 8*zoom, dotY = oy + oh/2;
+      ctx.beginPath(); ctx.arc(dotX, dotY, PORT_R*zoom, 0, Math.PI*2);
+      ctx.fillStyle = isConnected ? '#5b6ef5' : '#2f3647';
+      ctx.fill();
+      ctx.strokeStyle = isConnected ? '#7c8ffa' : '#4f5a6e';
+      ctx.lineWidth = zoom;
+      ctx.stroke();
+    });
+  }
+  
+  // Input port (top center)
+  const inX = sx + sw/2, inY = sy;
+  ctx.beginPath(); ctx.arc(inX, inY, PORT_R*zoom, 0, Math.PI*2);
+  ctx.fillStyle = '#1a1e2a';
+  ctx.fill();
+  ctx.strokeStyle = '#4f5a6e';
+  ctx.lineWidth = zoom;
+  ctx.stroke();
+  
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r, topOnly=false) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.arcTo(x+w, y, x+w, y+r, r);
+  if (topOnly) {
+    ctx.lineTo(x+w, y+h);
+    ctx.lineTo(x, y+h);
+  } else {
+    ctx.lineTo(x+w, y+h-r);
+    ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+    ctx.lineTo(x+r, y+h);
+    ctx.arcTo(x, y+h, x, y+h-r, r);
+  }
+  ctx.lineTo(x, y+r);
+  ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+
+function truncate(text, maxW, ctx) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  while (text.length > 0 && ctx.measureText(text+'…').width > maxW) text = text.slice(0,-1);
+  return text + '…';
+}
+
+function drawConnection(conn) {
+  const fromNode = nodes.find(n => n.id === conn.fromNode);
+  const toNode = nodes.find(n => n.id === conn.toNode);
+  if (!fromNode || !toNode) return;
+  const optIdx = conn.fromOption;
+  const nh = getNodeHeight(fromNode);
+  const oy = fromNode.y + NODE_H + optIdx*OPTION_H + (OPTION_H-4)/2 + 4 + 2;
+  const {x: x1, y: y1} = worldToScreen(fromNode.x + NODE_W - 8, oy);
+  const {x: x2, y: y2} = worldToScreen(toNode.x + NODE_W/2, toNode.y);
+  drawBezier(x1, y1, x2, y2, '#5b6ef5', 2);
+}
+
+function drawTempConnection() {
+  const fromNode = connecting.node;
+  const optIdx = connecting.optionIdx;
+  const oy = fromNode.y + NODE_H + optIdx*OPTION_H + (OPTION_H-4)/2 + 4 + 2;
+  const {x:x1,y:y1} = worldToScreen(fromNode.x + NODE_W - 8, oy);
+  drawBezier(x1, y1, connectEnd.x, connectEnd.y, 'rgba(91,110,245,0.5)', 2);
+}
+
+function drawBezier(x1,y1,x2,y2,color,lw) {
+  const cp = Math.abs(x2-x1)*0.5 + 40;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.bezierCurveTo(x1+cp,y1, x2-cp,y2, x2,y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw * zoom;
+  ctx.setLineDash([]);
+  ctx.stroke();
+  // Arrow
+  const angle = Math.atan2(y2-(y1+y2)/2, x2-(x1+x2)/2);
+  ctx.save();
+  ctx.translate(x2,y2);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(-8*zoom,-4*zoom); ctx.lineTo(-8*zoom,4*zoom);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.restore();
+}
+
+// ─── HIT TESTING ──────────────────────────────────────────
+function getNodeAt(wx, wy) {
+  for (let i = nodes.length-1; i >= 0; i--) {
+    const n = nodes[i], nh = getNodeHeight(n);
+    if (wx>=n.x && wx<=n.x+NODE_W && wy>=n.y && wy<=n.y+nh) return n;
+  }
+  return null;
+}
+function getOptionPortAt(wx, wy) {
+  for (const n of nodes) {
+    if (!n.options) continue;
+    for (let i=0; i<n.options.length; i++) {
+      const portX = n.x + NODE_W - 8;
+      const portY = n.y + NODE_H + i*OPTION_H + (OPTION_H-4)/2 + 4 + 2;
+      if (Math.hypot(wx-portX, wy-portY) < 12) return {node:n, optionIdx:i};
+    }
+  }
+  return null;
+}
+function getInputPortAt(wx, wy) {
+  for (const n of nodes) {
+    const px = n.x + NODE_W/2, py = n.y;
+    if (Math.hypot(wx-px, wy-py) < 12) return n;
+  }
+  return null;
+}
+
+// ─── MOUSE EVENTS ─────────────────────────────────────────
+let mouseDown = false, mouseMoved = false;
+
+function onMouseDown(e) {
+  if (e.button === 1 || spaceDown) { isPanning=true; panStart={x:e.clientX,y:e.clientY}; panStartPan={x:panX,y:panY}; canvas.style.cursor='grabbing'; return; }
+  if (e.button !== 0) return;
+  mouseDown = true; mouseMoved = false;
+  const {x:wx,y:wy} = screenToWorld(e.offsetX, e.offsetY);
+  const port = getOptionPortAt(wx,wy);
+  if (port) { connecting = port; connectEnd = {x:e.offsetX,y:e.offsetY}; return; }
+  const node = getNodeAt(wx,wy);
+  if (node) {
+    selectedNode = node;
+    dragging = node; dragOffX = wx - node.x; dragOffY = wy - node.y;
+    sendWS({type:'node_select', user_id:currentUser.id, username:currentUser.username, avatar_color:currentUser.avatar_color, node_id:node.id});
+    redraw();
+  } else {
+    selectedNode = null;
+    isPanning = true; panStart={x:e.clientX,y:e.clientY}; panStartPan={x:panX,y:panY};
+    canvas.style.cursor = 'grab';
+    redraw();
+    closePanel();
+  }
+}
+
+function onMouseMove(e) {
+  mouseMoved = true;
+  sendWS({type:'cursor_move', user_id:currentUser.id, username:currentUser.username, avatar_color:currentUser.avatar_color, x:(e.offsetX-panX)/zoom, y:(e.offsetY-panY)/zoom});
+  if (isPanning) {
+    panX = panStartPan.x + (e.clientX - panStart.x);
+    panY = panStartPan.y + (e.clientY - panStart.y);
+    drawGrid(); redraw(); return;
+  }
+  if (connecting) { connectEnd = {x:e.offsetX,y:e.offsetY}; redraw(); return; }
+  if (dragging) {
+    const {x:wx,y:wy} = screenToWorld(e.offsetX, e.offsetY);
+    dragging.x = wx - dragOffX; dragging.y = wy - dragOffY;
+    redraw();
+    scheduleSave();
+    return;
+  }
+  // Cursor changes
+  const {x:wx,y:wy} = screenToWorld(e.offsetX, e.offsetY);
+  if (getOptionPortAt(wx,wy)) canvas.style.cursor = 'crosshair';
+  else if (getInputPortAt(wx,wy)) canvas.style.cursor = 'crosshair';
+  else if (getNodeAt(wx,wy)) canvas.style.cursor = 'move';
+  else canvas.style.cursor = 'default';
+}
+
+function onMouseUp(e) {
+  if (isPanning) { isPanning=false; canvas.style.cursor='default'; }
+  if (connecting) {
+    const {x:wx,y:wy} = screenToWorld(e.offsetX, e.offsetY);
+    const targetNode = getInputPortAt(wx,wy);
+    if (targetNode && targetNode !== connecting.node) {
+      // Remove existing connection from this option
+      connections = connections.filter(c => !(c.fromNode===connecting.node.id && c.fromOption===connecting.optionIdx));
+      connections.push({fromNode:connecting.node.id, fromOption:connecting.optionIdx, toNode:targetNode.id, id:uid()});
+      scheduleSave();
+      broadcastCanvas();
+    }
+    connecting = null; connectEnd = null; redraw();
+  }
+  if (dragging && mouseMoved) broadcastCanvas();
+  if (!mouseMoved && dragging) openPanel(dragging);
+  dragging = null; mouseDown = false;
+}
+
+function onWheel(e) {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  const mx = e.offsetX, my = e.offsetY;
+  panX = mx - (mx - panX) * factor;
+  panY = my - (my - panY) * factor;
+  zoom = Math.max(0.2, Math.min(3, zoom * factor));
+  document.getElementById('zoom-label').textContent = Math.round(zoom*100)+'%';
+  drawGrid(); redraw();
+}
+
+function onRightClick(e) {
+  e.preventDefault();
+  const {x:wx,y:wy} = screenToWorld(e.offsetX, e.offsetY);
+  const node = getNodeAt(wx,wy);
+  if (node) {
+    selectedNode = node;
+    redraw();
+    showCtxMenu(e.clientX, e.clientY);
+  }
+}
+
+function onDblClick(e) {
+  const {x:wx,y:wy} = screenToWorld(e.offsetX, e.offsetY);
+  const node = getNodeAt(wx,wy);
+  if (node) { selectedNode = node; openPanel(node); }
+  else addDropdownNode(wx, wy);
+}
+
+function onKeyDown(e) {
+  
+  if (e.code==='Space' && e.target.tagName!=='INPUT') { spaceDown=true; canvas.style.cursor='grab'; e.preventDefault(); }
+  if ((e.key==='Delete'||e.key==='Backspace') && selectedNode && e.target.tagName!=='INPUT') deleteSelectedNode();
+}
+function onKeyUp(e) { if (e.code==='Space') { spaceDown=false; canvas.style.cursor='default'; } }
+
+// ─── NODE OPERATIONS ──────────────────────────────────────
+let nodeCounter = 1;
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function addDropdownNode(wx, wy) {
+  console.log("coming inside add drop down node fucntion")
+  const cw = canvas.width, ch = canvas.height;
+  const {x: cx, y: cy} = screenToWorld(cw/2, ch/2);
+  const node = {
+    id: uid(), type: 'dropdown', label: `Select Option ${nodeCounter++}`,
+    x: wx !== undefined ? wx - NODE_W/2 : cx - NODE_W/2 + (Math.random()*80-40),
+    y: wy !== undefined ? wy - NODE_H/2 : cy - NODE_H/2 + (Math.random()*80-40),
+    options: ['Option A', 'Option B'], note: ''
+  };
+  nodes.push(node);
+  selectedNode = node;
+  openPanel(node);
+  redraw();
+  scheduleSave();
+  broadcastCanvas();
+}
+
+function deleteSelectedNode() {
+  console.log("coming inside delete selected node")
+  if (!selectedNode) return;
+  nodes = nodes.filter(n => n !== selectedNode);
+  connections = connections.filter(c => c.fromNode !== selectedNode.id && c.toNode !== selectedNode.id);
+  selectedNode = null;
+  console.log("one node deleted")
+  closePanel();
+  redraw();
+  scheduleSave();
+  broadcastCanvas();
+}
+
+// ─── PANEL ────────────────────────────────────────────────
+let panelNode = null;
+
+function openPanel(node) {
+  print("coming inside open panel function")
+  panelNode = node;
+  document.getElementById('panel-label').value = node.label || '';
+  document.getElementById('panel-note').value = node.note || '';
+  renderOptionFields(node.options || []);
+  document.getElementById('node-panel').classList.add('open');
+}
+
+function closePanel() {
+  console.log("coming inside close panel function")
+  document.getElementById('node-panel').classList.remove('open');
+  panelNode = null;
+}
+
+function renderOptionFields(options) {
+  console.log("coming inside render option fields function")
+  const el = document.getElementById('panel-options');
+  el.innerHTML = '';
+  options.forEach((opt, i) => {
+    const row = document.createElement('div'); row.className = 'option-row';
+    const inp = document.createElement('input'); inp.className = 'option-input'; inp.value = opt;
+    inp.placeholder = `Option ${i+1}`;
+    inp.oninput = () => {};
+    const del = document.createElement('button'); del.className = 'option-del'; del.textContent = '×';
+    del.onclick = () => { options.splice(i,1); renderOptionFields(options); };
+    row.appendChild(inp); row.appendChild(del);
+    el.appendChild(row);
+  });
+}
+
+function addOptionField() {
+  console.log("coming inside add option field function")
+  if (!panelNode) return;
+  if (!panelNode.options) panelNode.options = [];
+  panelNode.options.push('');
+  renderOptionFields(panelNode.options);
+}
+
+function onPanelChange() {}
+
+function applyPanel() {
+  console.log("coming inside apply panel function")
+  if (!panelNode) return;
+  panelNode.label = document.getElementById('panel-label').value;
+  panelNode.note = document.getElementById('panel-note').value;
+  const inputs = document.querySelectorAll('#panel-options .option-input');
+  panelNode.options = Array.from(inputs).map(i => i.value);
+  // Remove connections for deleted options
+  connections = connections.filter(c => !(c.fromNode === panelNode.id && c.fromOption >= panelNode.options.length));
+  redraw();
+  scheduleSave();
+  broadcastCanvas();
+  showToast('Node updated');
+}
+
+// ─── CANVAS DATA ──────────────────────────────────────────
+function getCanvasData() { 
+  console.log("coming inside get canvas data function")
+  return {nodes, connections}; }
+function loadCanvasData(data) {
+  nodes = (data.nodes || []);
+  connections = (data.connections || []);
+  redraw();
+}
+
+function broadcastCanvas() {
+  sendWS({type:'canvas_change', user_id:currentUser.id, username:currentUser.username, canvas_data:getCanvasData()});
+}
+
+// ─── SAVE ─────────────────────────────────────────────────
+function scheduleSave() {
+  console.log("coming inside schedule save")
+  const dot = document.getElementById('save-dot');
+  document.getElementById('save-text').textContent = 'Saving…';
+  dot.classList.add('saving');
+  clearTimeout(saveTimer);
+  console.log("coming inside schedule save before save timer")
+  saveTimer = setTimeout(saveChart, 1200);
+}
+
+async function saveChart() {
+  console.log("comign inside save chart funtion")
+  console.log("current chart id is: ", currentChartId)
+  if (!currentChartId) return;
+  console.log("current chart id is null")
+  await apiFetch(`/charts/${currentChartId}/`, 'PUT', {
+    title: document.getElementById('chart-title').value,
+    canvas_data: getCanvasData()
+  });
+  console.log("get canvas data function is called")
+  document.getElementById('save-dot').classList.remove('saving');
+  document.getElementById('save-text').textContent = 'Saved';
+}
+
+function onTitleChange() { scheduleSave(); }
+
+// ─── ZOOM ─────────────────────────────────────────────────
+function zoomIn() { zoom=Math.min(3,zoom*1.2); document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%'; drawGrid();redraw(); }
+function zoomOut() { zoom=Math.max(0.2,zoom/1.2); document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%'; drawGrid();redraw(); }
+function resetZoom() { zoom=1; panX=0; panY=0; document.getElementById('zoom-label').textContent='100%'; drawGrid();redraw(); }
+function fitAll() {
+  if (!nodes.length) return;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  nodes.forEach(n => { minX=Math.min(minX,n.x);minY=Math.min(minY,n.y);maxX=Math.max(maxX,n.x+NODE_W);maxY=Math.max(maxY,n.y+getNodeHeight(n)); });
+  const pad = 60, cw=canvas.width,ch=canvas.height;
+  zoom = Math.min((cw-2*pad)/(maxX-minX), (ch-2*pad)/(maxY-minY), 2);
+  panX = (cw - (maxX-minX)*zoom)/2 - minX*zoom;
+  panY = (ch - (maxY-minY)*zoom)/2 - minY*zoom;
+  document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
+  drawGrid();redraw();
+}
+
+// ─── SHARE ────────────────────────────────────────────────
+let shareLink = '';
+
+async function openShareModal() {
+  document.getElementById('share-modal').classList.add('open');
+  // Generate share link
+  const data = await apiFetch(`/charts/${currentChartId}/share/`, 'POST', {type:'link', permission:'edit'});
+  shareLink = `${location.origin}${location.pathname}?share=${data.share_token}`;
+  document.getElementById('share-link-text').textContent = shareLink;
+  loadShareList();
+}
+
+async function loadShareList() {
+  const data = await apiFetch(`/charts/${currentChartId}/share/`);
+  const el = document.getElementById('share-list');
+  el.innerHTML = '';
+  data.shares.forEach(s => {
+    const d = document.createElement('div'); d.className = 'share-item';
+    if (s.type === 'user') {
+      d.innerHTML = `<span style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:white">${s.shared_with[0].toUpperCase()}</span><span class="share-item-name">${s.shared_with}</span><span class="share-item-perm">${s.permission}</span>`;
+    } else {
+      d.innerHTML = `<span style="color:var(--text3);font-size:18px">🔗</span><span class="share-item-name">Link share</span><span class="share-item-perm">${s.permission} · ${s.accessed_count} views</span>`;
+    }
+    el.appendChild(d);
+  });
+}
+
+function closeShareModal() { document.getElementById('share-modal').classList.remove('open'); }
+function copyShareLink() { navigator.clipboard.writeText(shareLink); showToast('Link copied!'); }
+
+async function shareWithUser() {
+  const username = document.getElementById('share-username-input').value.trim();
+  const permission = document.getElementById('share-perm').value;
+  if (!username) return;
+  const data = await apiFetch(`/charts/${currentChartId}/share/`, 'POST', {type:'user', username, permission});
+  if (data.error) { showToast('User not found'); return; }
+  showToast(`Shared with ${username}`);
+  document.getElementById('share-username-input').value = '';
+  loadShareList();
+}
+
+// ─── PREVIEW ──────────────────────────────────────────────
+function togglePreview() { openPreviewModal(); }
+function closePreview() { document.getElementById('preview-modal').classList.remove('open'); }
+
+function openPreviewModal() {
+  document.getElementById('preview-modal').classList.add('open');
+  renderPreview();
+}
+
+function renderPreview() {
+  const el = document.getElementById('preview-content');
+  // Find root nodes (no incoming connections)
+  const hasIncoming = new Set(connections.map(c => c.toNode));
+  const roots = nodes.filter(n => !hasIncoming.has(n.id));
+  if (!roots.length && nodes.length > 0) roots.push(nodes[0]);
+  el.innerHTML = '';
+  const state = {};
+  function renderNode(node, depth) {
+    if (!node || depth > 20) return;
+    const wrap = document.createElement('div');
+    wrap.style.cssText = `margin-left:${depth*24}px;margin-bottom:12px`;
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:13px;color:var(--text3);margin-bottom:6px;font-weight:600';
+    label.textContent = node.label;
+    wrap.appendChild(label);
+    if (node.note) {
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:11px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px;border-left:2px solid var(--accent)';
+      note.textContent = 'ℹ ' + node.note;
+      wrap.appendChild(note);
+    }
+    const sel = document.createElement('select');
+    sel.style.cssText = 'width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:Inter,sans-serif;outline:none;margin-bottom:8px';
+    const blank = document.createElement('option'); blank.textContent = '— Select —'; blank.value = ''; sel.appendChild(blank);
+    (node.options||[]).forEach((opt,i) => { const o=document.createElement('option'); o.value=i; o.textContent=opt; sel.appendChild(o); });
+    const childWrap = document.createElement('div');
+    sel.onchange = () => {
+      childWrap.innerHTML = '';
+      const idx = parseInt(sel.value);
+      if (!isNaN(idx)) {
+        const conn = connections.find(c => c.fromNode===node.id && c.fromOption===idx);
+        if (conn) { const child = nodes.find(n=>n.id===conn.toNode); if (child) renderNode(child, depth+1); childWrap.style.marginTop='4px'; }
+      }
+      // Append into childWrap
+      el.querySelector(`[data-child-for="${node.id}"]`)?.replaceChildren(...childWrap.children);
+    };
+    wrap.appendChild(sel);
+    const cw = document.createElement('div'); cw.setAttribute('data-child-for', node.id);
+    wrap.appendChild(cw);
+    el.appendChild(wrap);
+  }
+  roots.forEach(n => renderNode(n, 0));
+}
+
+// ─── CONTEXT MENU ─────────────────────────────────────────
+let ctxNode = null;
+function showCtxMenu(cx, cy) {
+  ctxNode = selectedNode;
+  const m = document.getElementById('ctx-menu');
+  m.style.display = 'block'; m.style.left = cx+'px'; m.style.top = cy+'px';
+  document.addEventListener('click', hideCtxMenu, {once:true});
+}
+function hideCtxMenu() { document.getElementById('ctx-menu').style.display = 'none'; }
+function ctxEdit() { if(ctxNode) openPanel(ctxNode); }
+function ctxDuplicate() {
+  if (!ctxNode) return;
+  const n = JSON.parse(JSON.stringify(ctxNode));
+  n.id = uid(); n.x += 32; n.y += 32;
+  nodes.push(n); redraw(); scheduleSave(); broadcastCanvas();
+}
+function ctxDelete() { selectedNode = ctxNode; deleteSelectedNode(); }
+
+// ─── TOAST ────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function timeAgo(ts) {
+  const d = new Date(ts), now = new Date();
+  const s = Math.floor((now-d)/1000);
+  if (s<60) return 'just now'; if (s<3600) return Math.floor(s/60)+'m ago';
+  if (s<86400) return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago';
+}
+
+// ─── INIT ──────────────────────────────────────────────────
+async function init() {
+  // Check for share token
+  const params = new URLSearchParams(location.search);
+  const shareToken = params.get('share');
+  if (shareToken) {
+    try {
+      const data = await fetch(`${API}/share/${shareToken}/`).then(r=>r.json());
+      if (data.id) {
+        // Need login first
+        if (!token || !currentUser) { document.getElementById('auth-screen').style.display = 'flex'; return; }
+        currentChartId = data.id;
+        document.getElementById('dashboard').classList.remove('visible');
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app').classList.add('visible');
+        document.getElementById('chart-title').value = data.title;
+        const av = document.getElementById('app-avatar');
+        av.textContent = currentUser.username[0].toUpperCase();
+        av.style.background = currentUser.avatar_color;
+        initCanvas();
+        loadCanvasData(data.canvas_data);
+        connectWS(data.id);
+        return;
+      }
+    } catch(e) {}
+  }
+  if (token && currentUser) showDashboard();
+  else document.getElementById('auth-screen').style.display = 'flex';
+}
+
+init();
+</script>
+</body>
+</html>
